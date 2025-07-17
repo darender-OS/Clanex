@@ -1,42 +1,34 @@
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
-# Install system dependencies and PHP extensions required by your project
+# Install system dependencies and PHP extensions (including intl)
 RUN apt-get update && apt-get install -y \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
     libicu-dev \
-    libldap2-dev \
-    libfreetype6-dev \
-    libjpeg-dev \
-    libpng-dev \
-    zip unzip git \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
     && docker-php-ext-configure intl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) intl xml zip pdo_mysql exif ldap gd
+    && docker-php-ext-install intl pdo_mysql zip opcache
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
-
-# Copy composer binary from official image
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
+# Set working directory
 WORKDIR /var/www/html
 
-# Copy only composer files and install dependencies first for better caching
+# Copy composer.json and composer.lock first for better caching
 COPY composer.json composer.lock ./
 
-# Run composer install with proper environment variable to allow root usage (in container)
-RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
+# Install composer dependencies without dev packages and optimize autoloader
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && php -r "unlink('composer-setup.php');" \
+    && composer install --no-dev --optimize-autoloader --no-interaction
 
-# Copy all application files
+# Copy all application source code
 COPY . .
 
-# Fix permissions so PHP (www-data) can write config and assets
-RUN chown -R www-data:www-data /var/www/html/config /var/www/html/assets
+# Fix permissions recursively for www-data user on entire app directory
+RUN chown -R www-data:www-data /var/www/html
 
-# Expose port 80
-EXPOSE 80
+# Expose port 9000 for PHP-FPM (or 80 if you have nginx/apache in front)
+EXPOSE 9000
 
-# Start apache in foreground
-CMD ["apache2-foreground"]
+CMD ["php-fpm"]
