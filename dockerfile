@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN a2enmod rewrite
 
+RUN chown -R www-data:www-data /var/www/html/assets
+RUN chmod -R 755 /var/www/html/assets
+
 RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
