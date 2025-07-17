@@ -31,3 +31,5 @@ EXPOSE 80
 
 # Run Apache in foreground
 CMD ["apache2-foreground"]
+
+RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
