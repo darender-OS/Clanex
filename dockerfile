@@ -6,6 +6,18 @@ RUN apt-get update && apt-get install -y \
 
 RUN a2enmod rewrite
 
+RUN apt-get update && apt-get install -y \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    libldap2-dev \
+    libxml2-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd exif ldap zip pdo_mysql xml \
+    && pecl install apcu \
+    && docker-php-ext-enable apcu
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
